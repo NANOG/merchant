@@ -56,12 +56,45 @@ class AuthorizeNetDpmIntegration(Integration):
 
     def verify_response(self, request):
         data = request.POST.copy()
-        md5_hash = self.authorize_net_settings["MD5_HASH"]
+        signature_key = self.authorize_net_settings["SIGNATURE_KEY"]
         login_id = self.authorize_net_settings["LOGIN_ID"]
-        hash_str = "%s%s%s%s" % (md5_hash, login_id,
-                                 data.get("x_trans_id", ""),
-                                 data.get("x_amount", ""))
-        return hashlib.md5(hash_str).hexdigest() == data.get("x_MD5_Hash").lower()
+
+        hash_str = "^" + "^".join((
+            data.get("x_trans_id", ""),
+            data.get("x_test_request", ""),
+            data.get("x_response_code", ""),
+            data.get("x_auth_code", ""),
+            data.get("x_cvv2_resp_code", ""),
+            data.get("x_cavv_response", ""),
+            data.get("x_avs_code", ""),
+            data.get("x_method", ""),
+            data.get("x_account_number", ""),
+            data.get("x_amount", ""),
+            data.get("x_company", ""),
+            data.get("x_first_name", ""),
+            data.get("x_last_name", ""),
+            data.get("x_address", ""),
+            data.get("x_city", ""),
+            data.get("x_state", ""),
+            data.get("x_zip", ""),
+            data.get("x_country", ""),
+            data.get("x_phone", ""),
+            data.get("x_fax", ""),
+            data.get("x_email", ""),
+            data.get("x_ship_to_company", ""),
+            data.get("x_ship_to_first_name", ""),
+            data.get("x_s hip_to_last_name", ""),
+            data.get("x_ship_to_address", ""),
+            data.get("x_ship_to_city", ""),
+            data.get("x_ship_to_state", ""),
+            data.get("x_ship_to_zip", ""),
+            data.get("x_ship_to_country", ""),
+            data.get("x_invoice_num", ""), )) + "^"
+
+        sign = hmac.new(signature_key.decode("hex"),
+                        hash_str,
+                        hashlib.sha512)
+        return sign.hexdigest().upper() == data.get("x_SHA2_Hash").upper()
 
     @csrf_exempt_m
     @require_POST_m
